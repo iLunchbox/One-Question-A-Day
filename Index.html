@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b0f14" />
+  <title>One Question a Day</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: #0b0f14; color: #e8eef7; line-height: 1.35;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 18px; }
+    .card {
+      background: #111826; border: 1px solid #223046; border-radius: 16px;
+      padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .muted { color: #9bb0c9; font-size: 13px; }
+    h1 { margin: 0 0 6px; font-size: 18px; font-weight: 650; }
+    .q {
+      font-size: 26px; font-weight: 650; margin: 14px 0 12px;
+      letter-spacing: -0.2px;
+    }
+    textarea {
+      width: 100%; min-height: 130px; resize: vertical;
+      background: #0d1420; color: #e8eef7;
+      border: 1px solid #223046; border-radius: 12px;
+      padding: 12px; font-size: 15px; outline: none;
+    }
+    textarea:focus { border-color: #3a5b87; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    button {
+      background: #1a2a40; color: #e8eef7; border: 1px solid #2c4261;
+      padding: 10px 12px; border-radius: 12px; font-weight: 600; cursor: pointer;
+    }
+    button:hover { border-color: #4a6fa3; }
+    button.primary { background: #234063; border-color: #3a5b87; }
+    button.danger { background: #3a1a1a; border-color: #6b2a2a; }
+    .pill {
+      display: inline-flex; gap: 8px; align-items: center;
+      padding: 6px 10px; border-radius: 999px;
+      border: 1px solid #223046; background: #0d1420;
+      font-size: 12px; color: #9bb0c9;
+    }
+    .footer { margin-top: 12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .spacer { flex: 1; }
+    .tiny { font-size: 12px; color: #9bb0c9; }
+    a { color:#9fc3ff; text-decoration:none; }
+    a:hover { text-decoration:underline; }
+
+    .panel {
+      margin-top: 12px;
+      background: #0d1420;
+      border: 1px solid #223046;
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .panel h2 {
+      margin: 0 0 6px;
+      font-size: 13px;
+      letter-spacing: .2px;
+      color: #9bb0c9;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .responseText {
+      margin: 0;
+      font-size: 14px;
+      color: #e8eef7;
+      white-space: pre-wrap;
+    }
+    .historyList {
+      margin: 10px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+    .historyItem {
+      border: 1px solid #223046;
+      background: rgba(17,24,38,.35);
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .historyMeta {
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      color:#9bb0c9; font-size:12px;
+    }
+    .historyQ { margin: 8px 0 6px; font-weight: 650; }
+    .historyA, .historyR { margin: 0; font-size: 13px; white-space: pre-wrap; color:#e8eef7; }
+    .historyR { margin-top: 8px; color:#d7e6ff; }
+
+    .toast {
+      position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+      background: rgba(17,24,38,.96); border: 1px solid #223046;
+      padding: 10px 12px; border-radius: 12px; color: #e8eef7;
+      font-size: 13px; display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>One Question a Day</h1>
+      <div class="muted">No accounts. No backend. Saves locally on this device.</div>
+
+      <div class="footer" style="margin-top:14px;">
+        <span class="pill" id="datePill">Date</span>
+        <span class="pill" id="streakPill">Streak</span>
+        <span class="spacer"></span>
+        <button id="styleBtn" title="Toggle tone: Supportive vs Direct">Tone: Supportive</button>
+        <button id="exportBtn" title="Download your entries as JSON">Export</button>
+      </div>
+
+      <div class="q" id="question">Loading…</div>
+
+      <textarea id="answer" placeholder="Type your answer… (or use voice)"></textarea>
+
+      <!-- one “companion-style” response per day -->
+      <div class="panel" id="responsePanel" style="display:none;">
+        <h2>Your response</h2>
+        <p class="responseText" id="responseText"></p>
+      </div>
+
+      <div class="row">
+        <button class="primary" id="saveBtn">Save + respond</button>
+        <button id="voiceBtn">Voice</button>
+        <button id="shuffleBtn" title="Pick a different question for today">New question today</button>
+        <button class="danger" id="clearTodayBtn" title="Delete only today’s answer">Clear today</button>
+        <button id="toggleHistoryBtn" title="Show your previous days">History</button>
+      </div>
+
+      <!-- history -->
+      <div class="panel" id="historyPanel" style="display:none;">
+        <h2>Past days</h2>
+        <div class="muted" id="historyHint">Tap a day to load it above.</div>
+        <ul class="historyList" id="historyList"></ul>
+      </div>
+
+      <div class="footer">
+        <div class="tiny">
+          Tip: On iPhone, add this page to Home Screen for an app-like feel.
+        </div>
+        <span class="spacer"></span>
+        <div class="tiny">
+          Data stays in your browser storage. Tip: Ctrl/⌘ + Enter saves.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const QUESTIONS = [
+    "What are you avoiding right now?",
+    "What would make tomorrow 10% better?",
+    "What did you do today that you’re proud of?",
+    "What’s one thing you can simplify this week?",
+    "What’s a thought you should stop rehearsing?",
+    "What’s one boundary you need to enforce?",
+    "Where are you spending energy that isn’t paying you back?",
+    "What’s the smallest next step you can take?",
+    "What are you pretending not to know?",
+    "Who or what deserves a thank-you today?",
+    "What did you learn about yourself recently?",
+    "What’s one thing you need to forgive yourself for?",
+    "What’s a decision you’ve been delaying?",
+    "What would you do if you weren’t trying to look perfect?",
+    "What’s a habit that’s quietly costing you?",
+    "What do you want more of in your life right now?",
+    "What do you need less of in your life right now?",
+    "What’s the real problem underneath the surface problem?",
+    "What’s one fear that’s driving your choices lately?",
+    "If today repeated for a year, would you be okay with that?"
+  ];
+
+  const STORE_KEY = "oqad.entries.v1";
+  const SEED_KEY  = "oqad.seed.v1";
+  const STYLE_KEY = "oqad.style.v1"; // "supportive" | "direct"
+
+  const $ = (id) => document.getElementById(id);
+  const toastEl = $("toast");
+  const showToast = (msg) => {
+    toastEl.textContent = msg;
+    toastEl.style.display = "block";
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.style.display = "none", 1400);
+  };
+
+  const todayISO = () => {
+    const d = new Date();
+    d.setHours(0,0,0,0);
+    return d.toISOString().slice(0,10);
+  };
+
+  const loadEntries = () => {
+    try { return JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); }
+    catch { return {}; }
+  };
+
+  const saveEntries = (entries) => {
+    localStorage.setItem(STORE_KEY, JSON.stringify(entries));
+  };
+
+  const loadSeed = () => {
+    try { return JSON.parse(localStorage.getItem(SEED_KEY) || "{}"); }
+    catch { return {}; }
+  };
+
+  const saveSeed = (seedObj) => {
+    localStorage.setItem(SEED_KEY, JSON.stringify(seedObj));
+  };
+
+  const loadStyle = () => {
+    const v = (localStorage.getItem(STYLE_KEY) || "supportive").toLowerCase();
+    return (v === "direct") ? "direct" : "supportive";
+  };
+
+  const saveStyle = (style) => {
+    localStorage.setItem(STYLE_KEY, style);
+  };
+
+  const hashString = (s) => {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0);
+  };
+
+  const getQuestionIndexForDay = (day, seed = 0) => {
+    const h = hashString(day + "|" + seed);
+    return h % QUESTIONS.length;
+  };
+
+  const computeStreak = (entries) => {
+    let streak = 0;
+    let d = new Date();
+    d.setHours(0,0,0,0);
+    while (true) {
+      const key = d.toISOString().slice(0,10);
+      const e = entries[key];
+      if (!e || !e.answer || !e.answer.trim()) break;
+      streak++;
+      d.setDate(d.getDate() - 1);
+    }
+    return streak;
+  };
+
+  const formatDay = (iso) => {
+    return new Date(iso + "T00:00:00").toLocaleDateString(undefined, {
+      weekday: "short", month: "short", day: "numeric", year: "numeric"
+    });
+  };
+
+  // ------------------------------------------------------------
+  // Offline “response logic” with Supportive/Direct toggle
+  // ------------------------------------------------------------
+  const pick = (arr, n) => arr[Math.abs(n) % arr.length];
+
+  const hasAny = (t, list) => list.some((w) => t.includes(w));
+  const hasWord = (t, list) => list.some((w) => new RegExp("\\b" + w + "\\b", "i").test(t));
+
+  const analyzeAnswer = (text) => {
+    const raw = (text || "").trim();
+    const t = raw.toLowerCase();
+
+    const POS = ["proud","grateful","thankful","win","progress","better","good","great","calm","relief","hope","excited","happy"];
+    const NEG = ["sad","lonely","tired","anxious","anxiety","stress","stressed","overwhelmed","scared","fear","angry","mad","hurt","depressed","panic","ashamed","guilty"];
+
+    const INTENT = ["i want to","i will","i’m going to","im going to","plan to","planning to","try to","trying to","need to","should","would","could","if i","if we","next","tomorrow","this week","soon"];
+    const SHIPPING_INTENT = ["ship","send","share","post","launch","beta","test","testing","dm","text","email","show","publish"];
+    const COMPLETED = ["i did","i shipped","i sent","i shared","i posted","i launched","i finished","i completed","i delivered","i showed","i published","i tested","i called","i built","i made","i wrote","i coded"];
+
+    const isEmpty = raw.length === 0;
+
+    let pos = 0, neg = 0;
+    for (const w of POS) if (t.includes(w)) pos++;
+    for (const w of NEG) if (t.includes(w)) neg++;
+
+    const hasIntent = isEmpty ? false : (hasAny(t, INTENT) || hasAny(t, SHIPPING_INTENT));
+    const hasShippingIntent = isEmpty ? false : hasAny(t, SHIPPING_INTENT);
+    const hasCompletedClaim = isEmpty ? false : (hasAny(t, COMPLETED) || hasWord(t, ["did","sent","shared","posted","launched","finished","completed","built","made","wrote","coded"]));
+    const completionConfidence = hasAny(t, COMPLETED) ? 2 : (hasCompletedClaim ? 1 : 0);
+
+    return {
+      raw, isEmpty, pos, neg,
+      hasIntent, hasShippingIntent,
+      completionConfidence,
+      len: raw.length
+    };
+  };
+
+  const STYLE_SETS = {
+    supportive: {
+      label: "Supportive",
+      openers: [
+        "Got it.",
+        "I hear you.",
+        "Thank you for writing that down.",
+        "That’s clear.",
+        "You checked in today. That matters."
+      ],
+      mirrors: [
+        "A quick mirror: you’re naming it instead of letting it swirl.",
+        "A quick mirror: you’re trying to move forward even with noise around you.",
+        "A quick mirror: you’re looking for truth, not comfort.",
+        "A quick mirror: you’re paying attention, that is a real skill.",
+        "A quick mirror: you’re choosing clarity over avoidance."
+      ],
+      affirmations: [
+        "What you wrote matters because it makes the truth visible.",
+        "Naming it is the first move. Most people never do that.",
+        "Small consistency beats big intensity.",
+        "Clarity is leverage. One honest sentence can change a day.",
+        "This is how momentum starts, one real step at a time."
+      ],
+      gentleIfHard: [
+        "If this feels heavy, keep it small, just the next 10 minutes.",
+        "If you’re overwhelmed, pick one thing and shrink it to the smallest step.",
+        "If you’re feeling alone, you still did something useful by checking in.",
+        "If your mind is loud, don’t debate it. Return to one action you control.",
+        "If today was messy, you can still end it with one clean decision."
+      ],
+      toneLinePositive: "Hold onto the fact you took a minute to be honest with yourself.",
+      nextStepsGeneral: [
+        "Next step: write one sentence that starts with “The smallest thing I can do is…” then do it.",
+        "Next step: choose one task and set a 12-minute timer. Stop when it ends.",
+        "Next step: remove one friction point that is stealing attention.",
+        "Next step: decide what “good enough” looks like for tomorrow and commit to that.",
+        "Next step: pick one small action that reduces tomorrow’s stress."
+      ],
+      nextStepsShipping: [
+        "Next step: choose one person and send it, even if it is not perfect yet.",
+        "Next step: make the share smaller. One screenshot, one link, one sentence.",
+        "Next step: set a time today for the send. Put it on the calendar.",
+        "Next step: decide what feedback you want, then ask for only that.",
+        "Next step: define “beta” as one real user, not a crowd."
+      ]
+    },
+    direct: {
+      label: "Direct",
+      openers: [
+        "Noted.",
+        "Logged.",
+        "Okay.",
+        "Got it.",
+        "Clear."
+      ],
+      mirrors: [
+        "Mirror: you’re naming it instead of letting it drift.",
+        "Mirror: you’re choosing movement over noise.",
+        "Mirror: you’re looking for truth, not comfort.",
+        "Mirror: you’re paying attention. That’s leverage.",
+        "Mirror: you’re staying in the work."
+      ],
+      affirmations: [
+        "Writing it down makes it real.",
+        "Clarity is progress.",
+        "Small consistency wins.",
+        "This is how momentum is built.",
+        "Keep it concrete. Keep it small."
+      ],
+      gentleIfHard: [
+        "Keep it small. Next 10 minutes only.",
+        "Shrink the task until it’s obvious.",
+        "Pick one clean action and stop.",
+        "Don’t debate your mind. Do one controllable thing.",
+        "End the day with one clean decision."
+      ],
+      toneLinePositive: "Good. Now convert it into one action.",
+      nextStepsGeneral: [
+        "Next step: write the smallest doable action and do it.",
+        "Next step: 12-minute timer. One task. Stop when it ends.",
+        "Next step: remove one friction point that steals attention.",
+        "Next step: define “good enough” for tomorrow and commit.",
+        "Next step: pick one action that reduces tomorrow’s stress."
+      ],
+      nextStepsShipping: [
+        "Next step: pick one person and send it.",
+        "Next step: screenshot + link + one line. Done.",
+        "Next step: schedule the send time today.",
+        "Next step: ask for one kind of feedback only.",
+        "Next step: define beta as one real user, not a crowd."
+      ]
+    }
+  };
+
+  const generateResponse = (question, answer, dayKey, style) => {
+    const set = STYLE_SETS[style] || STYLE_SETS.supportive;
+    const sig = analyzeAnswer(answer);
+    const h = hashString(dayKey + "|" + style + "|" + question + "|" + (answer || ""));
+
+    if (sig.isEmpty) {
+      if (style === "direct") {
+        return [
+          pick(set.openers, h),
+          "",
+          "One sentence is enough.",
+          "",
+          "Template: “Right now, the main thing is ____.”"
+        ].join("\n");
+      }
+      return [
+        pick(set.openers, h),
+        "",
+        "You can keep it simple today. One sentence is enough.",
+        "",
+        "Try this: “Right now, the main thing on my mind is ____.”"
+      ].join("\n");
+    }
+
+    let toneLine = "";
+    if (sig.neg > sig.pos) toneLine = pick(set.gentleIfHard, h + 1);
+    else toneLine = set.toneLinePositive;
+
+    const q = (question || "").toLowerCase();
+    let qNudge = "";
+    if (q.includes("avoiding")) qNudge = "Avoidance usually protects something. What is it protecting: comfort, identity, or fear of a result?";
+    else if (q.includes("10% better")) qNudge = "Your 10 percent can be boring. Boring is how systems get built.";
+    else if (q.includes("proud")) qNudge = "Name the specific behavior. Not the vibe. Behavior is repeatable.";
+    else if (q.includes("boundary")) qNudge = "Boundary = clarity + follow-through. One sentence. One consequence.";
+    else if (q.includes("next step")) qNudge = "If it feels big, it’s not the next step yet. Halve it until it’s obvious.";
+
+    let intentLine = "";
+    if (sig.hasShippingIntent && sig.completionConfidence === 0) {
+      intentLine = (style === "direct")
+        ? "You’re aiming at shipping. Convert intent into one send."
+        : "You’re aiming at shipping. That intent matters. The move now is turning it into one small send.";
+    } else if (sig.hasShippingIntent && sig.completionConfidence > 0) {
+      intentLine = (style === "direct")
+        ? "You moved it from idea to outside your head. Keep doing that."
+        : "You moved something from idea to the world. Keep that habit, it compounds.";
+    } else if (sig.hasIntent && sig.completionConfidence === 0) {
+      intentLine = (style === "direct")
+        ? "You’ve got a next step. Keep it concrete."
+        : "You’re pointing at a next step. Good. Keep it concrete and small.";
+    }
+
+    const nextStep = (sig.hasShippingIntent
+      ? pick(set.nextStepsShipping, h + 4)
+      : pick(set.nextStepsGeneral, h + 4)
+    );
+
+    const closingQ = (style === "direct")
+      ? "Tomorrow question: what’s the smallest action that turns intent into movement?"
+      : "Question for tomorrow-you: what is one small action that turns intent into movement?";
+
+    return [
+      pick(set.openers, h),
+      toneLine,
+      intentLine ? ("\n" + intentLine) : "",
+      "",
+      pick(set.mirrors, h + 2),
+      pick(set.affirmations, h + 3),
+      qNudge ? ("\n" + qNudge) : "",
+      "",
+      nextStep,
+      "",
+      closingQ
+    ].filter(Boolean).join("\n");
+  };
+  // ------------------------ end response logic ------------------------
+
+  const state = {
+    day: todayISO(),
+    seed: 0,
+    qIndex: 0,
+    viewingDay: null,
+    style: loadStyle()
+  };
+
+  const renderResponse = (entry) => {
+    const has = entry && entry.response && entry.response.trim();
+    $("responsePanel").style.display = has ? "block" : "none";
+    $("responseText").textContent = has ? entry.response : "";
+  };
+
+  const renderHistory = (entries) => {
+    const keys = Object.keys(entries || {}).sort((a,b) => b.localeCompare(a));
+    const list = $("historyList");
+    list.innerHTML = "";
+
+    if (!keys.length) {
+      $("historyHint").textContent = "No saved days yet.";
+      return;
+    }
+    $("historyHint").textContent = "Tap a day to load it above.";
+
+    for (const k of keys) {
+      const e = entries[k];
+      if (!e) continue;
+
+      const li = document.createElement("li");
+      li.className = "historyItem";
+      li.tabIndex = 0;
+
+      const meta = document.createElement("div");
+      meta.className = "historyMeta";
+      meta.textContent = `${formatDay(k)} • ${e.answer && e.answer.trim() ? "saved" : "empty"}${e.style ? " • " + e.style : ""}`;
+
+      const q = document.createElement("div");
+      q.className = "historyQ";
+      q.textContent = e.question || "(question)";
+
+      const a = document.createElement("p");
+      a.className = "historyA";
+      a.textContent = e.answer ? e.answer : "";
+
+      const r = document.createElement("p");
+      r.className = "historyR";
+      r.style.display = (e.response && e.response.trim()) ? "block" : "none";
+      r.textContent = e.response ? ("Response:\n" + e.response) : "";
+
+      li.appendChild(meta);
+      li.appendChild(q);
+      if (e.answer && e.answer.trim()) li.appendChild(a);
+      if (e.response && e.response.trim()) li.appendChild(r);
+
+      const loadThisDay = () => {
+        state.viewingDay = k;
+        hydrate();
+        showToast("Loaded.");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      };
+
+      li.addEventListener("click", loadThisDay);
+      li.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); loadThisDay(); }
+      });
+
+      list.appendChild(li);
+    }
+  };
+
+  const updateStyleButton = () => {
+    const set = STYLE_SETS[state.style] || STYLE_SETS.supportive;
+    $("styleBtn").textContent = `Tone: ${set.label}`;
+  };
+
+  const hydrate = () => {
+    const entries = loadEntries();
+    const seedObj = loadSeed();
+
+    state.style = loadStyle();
+    updateStyleButton();
+
+    const dayToShow = state.viewingDay || state.day;
+
+    const seed = seedObj[dayToShow] ?? 0;
+    const qIndex = getQuestionIndexForDay(dayToShow, seed);
+
+    state.seed = seedObj[state.day] ?? 0;
+    state.qIndex = getQuestionIndexForDay(state.day, state.seed);
+
+    $("datePill").textContent = formatDay(dayToShow);
+    $("streakPill").textContent = `Streak: ${computeStreak(entries)}`;
+
+    $("question").textContent = QUESTIONS[qIndex];
+    const entry = entries[dayToShow];
+    $("answer").value = entry?.answer || "";
+
+    renderResponse(entry);
+
+    if ($("historyPanel").style.display !== "none") {
+      renderHistory(entries);
+    }
+  };
+
+  const saveToday = () => {
+    const answer = $("answer").value || "";
+    const entries = loadEntries();
+
+    const response = generateResponse(QUESTIONS[state.qIndex], answer, state.day, state.style);
+
+    entries[state.day] = {
+      day: state.day,
+      questionIndex: state.qIndex,
+      question: QUESTIONS[state.qIndex],
+      answer,
+      response,
+      style: state.style, // stored so history reflects tone used that day
+      updatedAt: new Date().toISOString()
+    };
+
+    saveEntries(entries);
+
+    state.viewingDay = null;
+    hydrate();
+    showToast("Saved + responded.");
+  };
+
+  $("saveBtn").addEventListener("click", saveToday);
+
+  $("styleBtn").addEventListener("click", () => {
+    const next = (loadStyle() === "supportive") ? "direct" : "supportive";
+    saveStyle(next);
+    state.style = next;
+    updateStyleButton();
+    showToast(`Tone: ${STYLE_SETS[next].label}`);
+
+    // If today's entry exists, regenerate today's response in the new tone (without changing their answer).
+    // Comment this block out if you want tone changes to affect only future saves.
+    const entries = loadEntries();
+    const e = entries[state.day];
+    if (e && (e.answer || "").trim()) {
+      e.response = generateResponse(e.question || QUESTIONS[state.qIndex], e.answer || "", state.day, next);
+      e.style = next;
+      e.updatedAt = new Date().toISOString();
+      saveEntries(entries);
+      if (!state.viewingDay) renderResponse(e);
+    }
+  });
+
+  $("clearTodayBtn").addEventListener("click", () => {
+    const entries = loadEntries();
+    delete entries[state.day];
+    saveEntries(entries);
+    $("answer").value = "";
+    state.viewingDay = null;
+    hydrate();
+    showToast("Cleared.");
+  });
+
+  $("shuffleBtn").addEventListener("click", () => {
+    const seedObj = loadSeed();
+    const current = seedObj[state.day] ?? 0;
+    seedObj[state.day] = current + 1;
+    saveSeed(seedObj);
+
+    if (!state.viewingDay) {
+      state.seed = seedObj[state.day];
+      state.qIndex = getQuestionIndexForDay(state.day, state.seed);
+    }
+    hydrate();
+    showToast("New question set for today.");
+  });
+
+  $("exportBtn").addEventListener("click", () => {
+    const entries = loadEntries();
+    const blob = new Blob([JSON.stringify(entries, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "one-question-a-day-entries.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  $("toggleHistoryBtn").addEventListener("click", () => {
+    const p = $("historyPanel");
+    const open = p.style.display !== "none";
+    p.style.display = open ? "none" : "block";
+    if (!open) renderHistory(loadEntries());
+  });
+
+  $("answer").addEventListener("keydown", (ev) => {
+    if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") {
+      ev.preventDefault();
+      saveToday();
+    }
+  });
+
+  let recognizing = false;
+  let recognition = null;
+
+  const setupSpeech = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return false;
+
+    recognition = new SpeechRecognition();
+    recognition.lang = navigator.language || "en-US";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    let finalText = "";
+
+    recognition.onstart = () => {
+      recognizing = true;
+      $("voiceBtn").textContent = "Listening…";
+      showToast("Listening…");
+    };
+
+    recognition.onerror = () => {
+      recognizing = false;
+      $("voiceBtn").textContent = "Voice";
+      showToast("Voice unavailable.");
+    };
+
+    recognition.onend = () => {
+      recognizing = false;
+      $("voiceBtn").textContent = "Voice";
+      if (finalText.trim()) {
+        const ta = $("answer");
+        ta.value = (ta.value ? (ta.value.trimEnd() + "\n") : "") + finalText.trim();
+      }
+      finalText = "";
+    };
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += t + " ";
+        else interim += t;
+      }
+      if (interim) showToast(interim.trim());
+    };
+
+    return true;
+  };
+
+  const speechReady = setupSpeech();
+  if (!speechReady) {
+    $("voiceBtn").disabled = true;
+    $("voiceBtn").title = "Voice dictation not supported in this browser.";
+    $("voiceBtn").textContent = "Voice (N/A)";
+  } else {
+    $("voiceBtn").addEventListener("click", () => {
+      if (!recognition) return;
+      if (recognizing) { recognition.stop(); return; }
+      recognition.start();
+    });
+  }
+
+  hydrate();
+})();
+</script>
+</body>
+</html>
+```0
